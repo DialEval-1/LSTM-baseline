@@ -1,53 +1,52 @@
 import json
-from collections import Counter
-import random
-import numpy as np
 from functools import partial
+
 import jieba
 import tensorflow as tf
+from tensorflow.python.keras.preprocessing.sequence import pad_sequences
 
-from baseline.utils import prepare_data, load_embedding
+from flags import define_flags
+from utils import Task
+from utils import load_embedding
+from utils import prepare_data
+
+QUALITY_MEASURES = ("A", "E", "S")
+C_NUGGET_TYPES = ('CNUG0', 'CNUG', 'CNUG*', 'CNaN')
+H_NUGGET_TYPES = ('HNUG', 'HNUG*', 'HNaN')
+QUALITY_SCALES = ('2', '1', '0', '-1', '-2')
 
 
 def get_nugget2ix():
     custom_nugget_2_ix = {
         "PAD": 0,
-        "NaN": 1,
-        "CNUG0": 2,
-        "CNUG": 3,
-        "CNUG*": 4
+        "CNaN": 1,
+        "CNUG": 2,
+        "CNUG*": 3,
+        "CNUG0": 4,
     }
 
     helpdesk_nugget_2_ix = {
         "PAD": 0,
-        "NaN": 1,
+        "HNaN": 1,
         "HNUG": 2,
         "HNUG*": 3
     }
 
-    nuuget_2_idx = custom_nugget_2_ix.copy()
-    nuuget_2_idx.update(helpdesk_nugget_2_ix)
-    return custom_nugget_2_ix, helpdesk_nugget_2_ix, nuuget_2_idx
+    nugget_2_idx = custom_nugget_2_ix.copy()
+    nugget_2_idx.update(helpdesk_nugget_2_ix)
+    return custom_nugget_2_ix, helpdesk_nugget_2_ix, nugget_2_idx
 
 
-def find_majority(seqs):
-    c = Counter(seqs)
-    most_common, freq = c.most_common()[0]
-    if freq > len(seqs) // 2 or freq > 1:
-        return most_common
-    return random.choice(seqs)
+def parse_nugget_label(annotations):
+    pass
 
-def stupid_tokenizer(seq):
-    return seq.split()
 
-def read_dch_json_gen(data_path,
-                      wtoi,
-                      merge_subjective_scores=np.mean,
-                      label_category="CS",
-                      tokenizer=jieba.cut_for_search,
-                      max_len=100):
-    data = json.load(open(data_path, encoding="utf-8"))["data"]
+def parse_quality_label(annotations):
+    pass
 
+
+
+def get_special_idx(wtoi):
     if "##UNK##" in wtoi:
         unk_id = wtoi["##UNK##"]
     elif "<unk>" in wtoi:
@@ -55,70 +54,70 @@ def read_dch_json_gen(data_path,
     else:
         raise KeyError("Cannot find unk in vocabulary")
 
-    for example in data:
-        utterances_per_example = []
-        senders_per_example = []
-        # write utterance and sender
-        for utterance in example["dialog"]["content"]:
-            sender = 1 if utterance["sender"].startswith("c") else 0
-            senders_per_example.append(sender)
-            utterances_per_example.append(
-                [wtoi.get(token, unk_id) for token in tokenizer(utterance["utterance"][:max_len])])
-
-        labels = {}
-        nuggets = []
-        for annotation in example["annotation"]:
-            # fetch subjective score
-            for sub, score in annotation["subjective"].items():
-                labels.setdefault(sub, [])
-
-                if sub != "CS":
-                    score = score - 1
-                else:
-                    score = score
-
-                labels[sub].append(score)
-            nuggets.append(annotation["nugget"])
-
-        # merge subjective scores from different annotators
-        for sub, scores in labels.items():
-            labels[sub] = merge_subjective_scores(scores) if merge_subjective_scores else scores
-        _, _, nugget_2_ix = get_nugget2ix()
-        # merge nuggets
-        nuggets = [nugget_2_ix[find_majority(nuggets)] for nuggets in zip(*nuggets)]
-        labels["nugget"] = nuggets
-
-        utterance_lengths = [len(u) for u in utterances_per_example]
-        dialogue_length = len(utterances_per_example)
-
-        padded_utterance = tf.keras.preprocessing.sequence.pad_sequences(utterances_per_example,
-                                                                         padding="post", truncating="post")
+    return unk_id
 
 
-        if label_category in labels:
-            yield (padded_utterance,
-                   senders_per_example,
-                   utterance_lengths,
-                   dialogue_length,
-                   labels[label_category])
+def read_json_generator(data_path,
+                        wtoi,
+                        task=Task.nugget,
+                        tokenizer=jieba.cut_for_search,
+                        max_len=100):
+    data = json.load(open(data_path, encoding="utf-8"))
+
+    unk_id = get_special_idx(wtoi)
+
+    for dialogue in data:
+        tokenized_turns = []
+        senders = []
+        for turn in dialogue["dialog"]["turns"]:
+            sender = 1 if turn["sender"].startswith("c") else 0
+            senders.append(sender)
+            text = " ".join(turn["utterances"])
+            tokenized_text = [wtoi.get(token, unk_id) for token in tokenizer(text[:max_len])]
+            tokenized_turns.append(tokenized_text)
+
+
+        if task == Task.nugget:
+            parse_fn = parse_nugget_label
+        elif task == Task.quality:
+            parse_fn = parse_nugget_label
         else:
-            raise ValueError("%s is not a valid label category" % label_category)
+            raise ValueError("Incorrect task %s" % task)
+
+        label = parse_fn(dialogue["annotations"])
+        utterance_lengths = [len(u) for u in tokenized_turns]
+        dialogue_length = len(tokenized_turns)
+        padded_utterance = pad_sequences(tokenized_turns,padding="post", truncating="post")
+
+        yield (padded_utterance,
+               senders,
+               utterance_lengths,
+               dialogue_length,
+               label)
 
 
-def dataset(data_path, wtoi, label_category="CS", batch_size=32, shuffle=True):
-    data_gen = partial(read_dch_json_gen,
+
+def dataset(data_path, wtoi,task=Task.nugget, batch_size=32, shuffle=True):
+    data_gen = partial(read_json_generator,
                        wtoi=wtoi,
                        data_path=data_path,
-                       label_category=label_category)
+                       task=task)
 
-    label_dtype = tf.int32 if label_category == "nugget" else tf.float32
+
     dataset = tf.data.Dataset.from_generator(data_gen,
-                                             output_types=(tf.int32, tf.bool, tf.int32, tf.int32, label_dtype))
+                                             output_types=(tf.int32, tf.bool, tf.int32, tf.int32, tf.float32))
 
     if shuffle:
         dataset = dataset.shuffle(5000)
 
-    label_shape = tf.TensorShape([None]) if label_category == "nugget" else tf.TensorShape([])
+    if task == Task.nugget:
+        label_shape = tf.TensorShape([None])
+    elif  task == Task.quality :
+        label_shape = tf.TensorShape([])
+    else:
+        raise ValueError("Incorrect task %s" % task)
+
+
     dataset = dataset.padded_batch(batch_size=batch_size,
                                    padded_shapes=(tf.TensorShape([None, None]),
                                                   tf.TensorShape([None]),
@@ -131,13 +130,13 @@ def dataset(data_path, wtoi, label_category="CS", batch_size=32, shuffle=True):
 
 
 if __name__ == "__main__":
-    from baseline.main import FLAGS
+    params = define_flags()
 
-    train_path, dev_path, test_path = prepare_data(FLAGS.embedding_path, FLAGS.dch_path)
-    wtoi, itow, weight = load_embedding(FLAGS.embedding_path)
-    train_dataset = dataset(train_path, wtoi, label_category="CS", batch_size=FLAGS.batch_size)
-    dev_dataset = dataset(dev_path, wtoi, label_category="CS", batch_size=FLAGS.batch_size * 3)
-    test_dataset = dataset(test_path, wtoi, label_category="CS", batch_size=FLAGS.batch_size * 3)
+    train_path, dev_path, test_path = prepare_data(params.embedding_path, params.data_path)
+    wtoi, itow, weight = load_embedding(params.embedding_path)
+    train_dataset = dataset(train_path, wtoi, task=Task.nugget, batch_size=params.batch_size)
+    dev_dataset = dataset(dev_path, wtoi, task=Task.nugget, batch_size=params.batch_size * 3)
+    test_dataset = dataset(test_path, wtoi, task=Task.nugget, batch_size=params.batch_size * 3)
 
     iterator = tf.data.Iterator.from_structure(train_dataset.output_types,
                                                train_dataset.output_shapes)
