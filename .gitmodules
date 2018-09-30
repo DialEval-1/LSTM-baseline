@@ -1,3 +1,3 @@
 [submodule "stc3-dataset"]
-	path = stc3-dataset
+	path = stc3dataset
 	url = git@github.com:sakai-lab/stc3-dataset.git
