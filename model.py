@@ -35,15 +35,9 @@ class Model(object):
         self.dropout = tf.placeholder_with_default(params.dropout, shape=[], name="dropout_rate")
 
         with tf.device("/cpu:0"):
-            # Variable init does not accept weights that are larger than 2GB
-            # so we use placeholder and assign to hack
-            self.embedding_placeholder = tf.placeholder(
-                shape=embedding.shape, dtype=tf.float32,
-                name="embedding_placeholder")
-            self._embedding = tf.Variable(tf.constant(0.0, shape=embedding.shape), trainable=params.update_embedding,
-                                          name="embedding_weights", dtype=tf.float32)
-            embedding_init = self._embedding.assign(self.embedding_placeholder, name="assign_embedding")
-            turns_embedded = tf.nn.embedding_lookup(self._embedding, self.turns)
+            self.embedding = tf.get_variable(shape=embedding.shape, trainable=params.update_embedding,
+                                             name="embedding_weights", dtype=tf.float32)
+            turns_embedded = tf.nn.embedding_lookup(self.embedding, self.turns)
         turns_boW = tf.reduce_sum(turns_embedded, axis=2, name="BoW")  # Bag of Words
 
         features = (turns_boW, self.senders, self.turn_lengths, self.dialogue_lengths)
@@ -75,8 +69,11 @@ class Model(object):
         self.run_metadata = tf.RunMetadata()
 
         self.session.run(tf.global_variables_initializer())
-        self.session.run(embedding_init, feed_dict={self.embedding_placeholder: embedding})
+        # Variable init does not accept weights that are larger than 2GB
+        # This must be ran after global_variables_initializer
+        self.session.run(self.embedding.initializer, feed_dict={self.embedding.initial_value: embedding})
 
+        assert np.allclose(self.session.run(self.embedding), embedding)
     def save_model(self, save_path: Path = None):
         save_path.parent.mkdir(parents=True, exist_ok=True)
         self.saver.save(self.session, str(save_path))
