@@ -20,17 +20,19 @@ def define_flags():
 
 def __define_base(parser):
     parser.add_argument("--task", type=str, default="nugget")
-    parser.add_argument("--language", type=str, default="chinese")
+    parser.add_argument("--language", type=str, default="english")
     parser.add_argument("--embedding-path", type=str, default=PROJECT_DIR / "data" / "embedding")
     parser.add_argument("--cache-path", type=str, default=PROJECT_DIR / "data" / "cache")
     parser.add_argument("--data-path", type=str, default=PROJECT_DIR / "stc3dataset" / "data")
     parser.add_argument("--output-path", type=str, default=PROJECT_DIR / "output")
+    parser.add_argument("--log-path", type=str, default=PROJECT_DIR / "log")
     parser.add_argument("--checkpoint-path", type=str, default=PROJECT_DIR / "checkpoint")
     parser.add_argument("--test", type=bool, default=False)
     parser.add_argument("--resume", action="store_true", default=False)
+    parser.add_argument("--tag", type=str, default="baseline")
 
 def __define_training(parser):
-    parser.add_argument("--epoch-num", type=int, default=50)
+    parser.add_argument("--num_epoch", type=int, default=50)
     parser.add_argument("--patience", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--dropout", type=float, default=.3)
@@ -45,10 +47,10 @@ def __define_training(parser):
     parser.add_argument("--nugget-primary-metric", type=str, default="rnss")
 
 def __define_model(parser):
-    parser.add_argument("--english-vocab", type=str, default="Glove6B")
+    parser.add_argument("--english-vocab", type=str, default="Glove840B")
     parser.add_argument("--chinese-vocab", type=str, default="Baidu")
     parser.add_argument("--hidden-size", type=int, default=150)
-    parser.add_argument("--num-layer", type=int, default=3)
+    parser.add_argument("--num-layers", type=int, default=3)
     parser.add_argument("--cell", type=str, default="LSTMCell")
 
 

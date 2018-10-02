@@ -113,8 +113,6 @@ class Vocab(object):
                 self.logger.info("Unzipping the embedding file %s" % self.download_file)
                 zf.extract(member=unzipped_file_name, path=self.store_folder)
 
-            self.logger.info("Delete the zip file %s" % self.download_file)
-            self.download_file.unlink()
             self.download_file = self.store_folder / unzipped_file_name
 
     def _load_and_to_pickle(self):
@@ -161,7 +159,7 @@ class Glove840B(Vocab):
 
 class Glove6B(Vocab):
     def __init__(self, store_folder, download_url=GLOVE_6B_PATH, tokenizer=None):
-        super().__init__(store_folder, download_url, md5=None, file_to_extract="glove.6B.50d.txt",
+        super().__init__(store_folder, download_url, md5=None, file_to_extract="glove.6B.300d.txt",
                          language=Language.english, tokenizer=tokenizer, cased=False)
 
     def _parse_embedding(self):

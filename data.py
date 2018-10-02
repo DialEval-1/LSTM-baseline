@@ -167,10 +167,7 @@ def process_raw_data(raw_data,
     else:
         logger.debug("Cache_path was not set, processed data from scratch")
         data = [x for x in data_gen()]
-
-    logger.debug("Data size: %d" % len(data))
-    logger.debug("Mode: %s" % "Train" if is_train else "Inference")
-
+    logger.debug("Dataset size: %d, type: %s" % (len(data), "training" if is_train else "inference"))
     return data
 
 
@@ -237,7 +234,7 @@ def customer_nugget_pred_to_dict(distribution):
     for nugget_type, prob in zip(CUSTOMER_NUGGET_TYPES_WITH_PAD, distribution):
         if nugget_type == "PAD":
             continue
-        result[nugget_type] = prob
+        result[nugget_type] = float(prob)
     return result
 
 
@@ -246,7 +243,7 @@ def helpdesk_nugget_pred_to_dict(distribution):
     for nugget_type, prob in zip(HELPDESK_NUGGET_TYPES_WITH_PAD, distribution):
         if nugget_type == "PAD":
             continue
-        result[nugget_type] = prob
+        result[nugget_type] = float(prob)
     return result
 
 
@@ -278,8 +275,9 @@ def quality_prediction_to_submission_format(prediction):
     dialog_id, (quality_pred), dialog_length = prediction
     result = {}
     for measure, quality_pred in zip(QUALITY_MEASURES, quality_pred):
+        result[str(measure)] = {}
         for scale, prob in zip(QUALITY_SCALES, quality_pred):
-            result[str(measure)][str(scale)] = prob
+            result[str(measure)][str(scale)] = float(prob)
 
     submission_format = {
         "id": dialog_id.decode("utf-8"),
