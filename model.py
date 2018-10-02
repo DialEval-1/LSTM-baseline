@@ -1,13 +1,11 @@
+import numpy as np
 import tensorflow as tf
 from pathlib2 import Path
-from tensorflow.contrib.cudnn_rnn import CudnnLSTM
 from tensorflow.contrib.rnn import stack_bidirectional_dynamic_rnn
 from tensorflow.python.ops import rnn_cell
-from tensorflow.python.ops.rnn_cell_impl import LSTMCell
-from data import Task
 
-import numpy as np
 import data
+from data import Task
 
 
 class Model(object):
@@ -74,6 +72,7 @@ class Model(object):
         self.session.run(self.embedding.initializer, feed_dict={self.embedding.initial_value: embedding})
 
         assert np.allclose(self.session.run(self.embedding), embedding)
+
     def save_model(self, save_path: Path = None):
         save_path.parent.mkdir(parents=True, exist_ok=True)
         self.saver.save(self.session, str(save_path))
@@ -99,7 +98,7 @@ class Model(object):
             [self.train_op, self.loss],
             feed_dict=feed_dict,
             run_metadata=self.run_metadata,
-            options = self.run_options
+            options=self.run_options
         )
 
         return loss
