@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
+PYTHON=python
 
-python train_dch.py --category TS &&
-python train_dch.py --category TA &&
-python train_dch.py --category CS &&
-python train_dch.py --category CA &&
-python train_dch.py --category HA;
+for task in "nugget" "quality"
+do
+    for language in "chinese" "english"
+    do
+        $PYTHON train.py --task $task --language $language || exit 1
+    done
+done

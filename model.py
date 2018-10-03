@@ -61,9 +61,9 @@ class Model(object):
                                        lr=params.learning_rate, optimizer=params.optimizer)
 
         # embedding weights are not saved into Graph if it is not trainable
-        self.saver = tf.train.Saver(tf.trainable_variables())
+        self.saver = tf.train.Saver(tf.trainable_variables(), save_relative_paths=True)
 
-        self.run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+        self.run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) if params.trace else tf.RunOptions()
         self.run_metadata = tf.RunMetadata()
 
         self.session.run(tf.global_variables_initializer())
@@ -73,14 +73,15 @@ class Model(object):
 
         assert np.allclose(self.session.run(self.embedding), embedding)
 
-    def save_model(self, save_path: Path = None):
+    def save_model(self, save_path: Path=None):
         save_path.parent.mkdir(parents=True, exist_ok=True)
         self.saver.save(self.session, str(save_path))
 
     def load_model(self, restore_path=None):
-        self.saver.restore(self.session, tf.train.latest_checkpoint(str(restore_path)))
+        path =tf.train.latest_checkpoint(str(restore_path))
+        self.saver.restore(self.session, path)
 
-    def __train_batch(self, batch_op):
+    def train_batch(self, batch_op):
         (_, turns, senders, turn_lengths, dialog_lengths,
          c_nugget_labels, h_nugget_labels, quality_labels) = self.session.run(batch_op)
 
@@ -110,7 +111,7 @@ class Model(object):
             self.session.run(batch_initializer)
             while True:
                 try:
-                    results.append(self.__train_batch(batch_op))
+                    results.append(self.train_batch(batch_op))
                     if save_per_epoch and save_path:
                         self.save_model(save_path)
                 except tf.errors.OutOfRangeError:

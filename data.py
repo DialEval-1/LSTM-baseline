@@ -100,7 +100,7 @@ def get_special_idx(embedding: Vocab):
 def process_raw_data(raw_data,
                      vocab,
                      max_len=300,
-                     cache_path=None,
+                     cache_dir=None,
                      is_train=True,
                      name="",
                      ):
@@ -149,8 +149,8 @@ def process_raw_data(raw_data,
                        turn_lengths,
                        dialogue_length)
 
-    if cache_path:
-        pkl_data = cache_path / data_pkl_name()
+    if cache_dir:
+        pkl_data = cache_dir / data_pkl_name()
 
         if not pkl_data.is_file():
             data = [x for x in data_gen()]
@@ -165,7 +165,7 @@ def process_raw_data(raw_data,
             data = utils.load(pkl_data)
             logger.debug("Loaded binary dataset from %s " % pkl_data)
     else:
-        logger.debug("Cache_path was not set, processed data from scratch")
+        logger.debug("Cache_dir was not set, processed data from scratch")
         data = [x for x in data_gen()]
     logger.debug("Dataset size: %d, type: %s" % (len(data), "training" if is_train else "inference"))
     return data

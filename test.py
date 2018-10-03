@@ -46,7 +46,7 @@ class TestDataset(TestCase):
 
     def test_load_cn_raw_dataset(self):
         dataset = process_raw_data(DATA_PATH / "train_data_cn.json", self.baidu,
-                                   cache_path=CACHE_PATH)
+                                   cache_dir=CACHE_PATH)
         self.assertEqual(len(dataset), 3700)
 
         expected_senders = [(i + 1) % 2 for i in range(500)]
@@ -67,7 +67,7 @@ class TestDataset(TestCase):
 
     def test_load_en_raw_dataset(self):
         dataset = process_raw_data(DATA_PATH / "train_data_en.json", self.glove,
-                                   cache_path=CACHE_PATH)
+                                   cache_dir=CACHE_PATH)
         self.assertEqual(len(dataset), 1672)
 
         expected_senders = [(i + 1) % 2 for i in range(500)]
