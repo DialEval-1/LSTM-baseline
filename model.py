@@ -198,15 +198,20 @@ def nugget_model_fn(features, dropout, params):
     turns, senders, utterance_lengths, dialog_lengths = features
     output = _encoder(turns, senders, dialog_lengths, dropout, params)
 
+
     # assume ordering is  [customer, helpdesk, customer, .....]
-    customer_index = tf.range(start=0, delta=2, limit=tf.shape(output)[1])
-    helpdesk_index = tf.range(start=1, delta=2, limit=tf.shape(output)[1])
+    max_time = tf.shape(output)[1]
+    customer_index = tf.range(start=0, delta=2, limit=max_time)
+    helpdesk_index = tf.range(start=1, delta=2, limit=max_time)
 
     customer_output = tf.gather(output, indices=customer_index, axis=1)
     helpdesk_output = tf.gather(output, indices=helpdesk_index, axis=1)
 
-    customer_logits = tf.layers.dense(customer_output, len(data.CUSTOMER_NUGGET_TYPES_WITH_PAD))
-    helpdesk_logits = tf.layers.dense(helpdesk_output, len(data.HELPDESK_NUGGET_TYPES_WITH_PAD))
+    assert_op = tf.assert_equal(tf.shape(customer_output)[1] + tf.shape(helpdesk_output)[1], max_time)
+
+    with tf.control_dependencies([assert_op]):
+        customer_logits = tf.layers.dense(customer_output, len(data.CUSTOMER_NUGGET_TYPES_WITH_PAD))
+        helpdesk_logits = tf.layers.dense(helpdesk_output, len(data.HELPDESK_NUGGET_TYPES_WITH_PAD))
 
     return customer_logits, helpdesk_logits
 
