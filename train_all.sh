@@ -5,6 +5,6 @@ for task in "nugget" "quality"
 do
     for language in "chinese" "english"
     do
-        $PYTHON train.py --task $task --language $language || exit 1
+        $PYTHON train.py --task $task --language $language $@ || exit 1
     done
 done

@@ -27,12 +27,13 @@ def __define_base(parser):
     parser.add_argument("--output-dir", type=str, default=PROJECT_DIR / "output")
     parser.add_argument("--log-dir", type=str, default=PROJECT_DIR / "log")
     parser.add_argument("--checkpoint-dir", type=str, default=PROJECT_DIR / "checkpoint")
+    parser.add_argument("--best-model-dir", type=str, default=PROJECT_DIR / "best_model")
     parser.add_argument("--infer-test", type=bool, default=False)
     parser.add_argument("--resume-dir", type=str, default=None)
     parser.add_argument("--tag", type=str, default="baseline")
 
 def __define_training(parser):
-    parser.add_argument("--num-epoch", type=int, default=15)
+    parser.add_argument("--num-epoch", type=int, default=30)
     parser.add_argument("--patience", type=int, default=3)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--dropout", type=float, default=.3)

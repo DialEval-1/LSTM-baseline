@@ -81,6 +81,7 @@ class Model(object):
         path =tf.train.latest_checkpoint(str(restore_path))
         self.saver.restore(self.session, path)
 
+
     def train_batch(self, batch_op):
         (_, turns, senders, turn_lengths, dialog_lengths,
          c_nugget_labels, h_nugget_labels, quality_labels) = self.session.run(batch_op)

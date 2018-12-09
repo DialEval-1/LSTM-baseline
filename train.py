@@ -16,14 +16,17 @@ from stc3dataset.data.eval import evaluate_from_list
 from vocab import Language
 
 PROJECT_DIR = Path(__file__).parent.parent
-
+import numpy as np
 
 def flags2params(flags, customized_params=None):
     if customized_params:
         flags.__dict__.update(customized_params)
 
     flags.checkpoint_dir = Path(flags.checkpoint_dir) / flags.language / flags.task
+
     flags.output_dir.mkdir(parents=True, exist_ok=True)
+
+    flags.best_model_dir = Path(flags.best_model_dir) / flags.language / flags.task
 
     flags.language = vocab.Language[flags.language]
     flags.task = data.Task[flags.task]
@@ -54,6 +57,7 @@ class TrainingHelper(object):
         assert not (params.log_dir / self.run_name).is_dir(), "The run %s has existed in Log Path %s" % (
         self.run_name, params.log_dir)
         self.checkpoint_dir = params.checkpoint_dir / self.run_name / "model"
+        self.best_model_dir = params.best_model_dir / self.run_name / "best"
         self.output_dir = params.output_dir
 
 
@@ -130,16 +134,30 @@ class TrainingHelper(object):
             save_path=checkpoint_dir or self.checkpoint_dir)
         return train_loss
 
+    def load_best_model(self):
+        self.model.load_model(self.best_model_dir.parent.resolve())
+
     def train(self, num_epoch=None):
+        best_score = 100
         for epoch in range(num_epoch or self.num_epoch):
             start = time.time()
             train_loss = self.train_epoch()
             used_time = time.time() - start
-            self.logger.info("%d Epoch, training loss = %.4f, used %.2f sec" % (epoch + 1, train_loss, used_time))
+            self.logger.info(" Epoch %d, training loss = %.4f, used %.2f sec" % (epoch + 1, train_loss, used_time))
             metrics = self.evaluate_on_dev()
-            self.logger.info("  Dev Metrics: %s" %metrics[self.task.name])
+            curr_score = self.metrics_to_single_value(metrics)
+
+            self.logger.info(" Dev Metrics: %s" %metrics[self.task.name])
+
             if self.log_to_tensorboard:
                 self.write_to_summary(metrics, epoch)
+
+            if best_score > curr_score:
+                best_score = curr_score
+                self.model.save_model(self.best_model_dir)
+
+        self.load_best_model()
+
 
     def write_to_summary(self, metrics, global_step):
         summary = tf.Summary()
@@ -182,9 +200,10 @@ class TrainingHelper(object):
         return submission
 
     def metrics_to_single_value(self, metrics):
-        pass
-
-
+        if self.task == Task.nugget:
+            return metrics["nugget"]["rnss"]
+        if self.task == Task.quality:
+            return np.mean(metrics["quality"]["rsnod"].values())
 
 
 
@@ -206,4 +225,5 @@ if __name__ == '__main__':
     trainer = TrainingHelper()
     if not trainer.inference_mode:
         trainer.train()
+
     test_prediction = trainer.predict_test()
