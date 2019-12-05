@@ -74,7 +74,8 @@ python train.py \
 
 ```
 By default, checkpoints will be stored in `./checkpoint`, and logs for tensorboard will be written to `./log`.
-After training, the prediction file for test set will be written to `./output`.
+After training, the prediction file for test set will be written to `./output`. Note that test prediction will not be performed when `test_en.json` and `test_cn.json` are not 
+available in the dataset folder (test data will be released later).
 
 For more adjustable hyper-parameters, please check `flags.py`.
 
