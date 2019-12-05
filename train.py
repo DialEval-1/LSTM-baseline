@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import os
 import time
 
 import numpy as np
@@ -43,7 +44,7 @@ class TrainingHelper(object):
         flags = define_flags()
         params = flags2params(flags, customized_params)
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("Trainer")
         self.logger.info("Task: " + str(params.task))
         self.logger.info("Language: " + str(params.language))
         self.task = params.task
@@ -64,12 +65,12 @@ class TrainingHelper(object):
             data_dir=params.data_dir,
             language=params.language)
 
-        self.raw_train = json.load(train_path.open())
-        self.raw_dev = json.load(dev_path.open())
-        self.raw_test = json.load(test_path.open())
+        raw_train = json.load(train_path.open())
+        raw_dev = json.load(dev_path.open())
+        self.raw_dev = raw_dev
 
         train_dataset = process_raw_data(
-            self.raw_train,
+            raw_train,
             vocab=vocab,
             max_len=params.max_len,
             cache_dir=params.cache_dir,
@@ -77,28 +78,33 @@ class TrainingHelper(object):
             name="train_%s" % params.language)
 
         dev_dataset = process_raw_data(
-            self.raw_dev,
+            raw_dev,
             vocab=vocab,
             max_len=params.max_len,
             cache_dir=params.cache_dir,
             is_train=False,
             name="dev_%s" % params.language)
 
-        test_dataset = process_raw_data(
-            self.raw_test,
-            vocab=vocab,
-            max_len=params.max_len,
-            cache_dir=params.cache_dir,
-            is_train=False,
-            name="test_%s" % params.language)
-
         pad_idx = vocab.pad_idx
         self.train_iterator = build_dataset_op(train_dataset, pad_idx, params.batch_size, is_train=True)
         self.train_batch = self.train_iterator.get_next()
         self.dev_iterator = build_dataset_op(dev_dataset, pad_idx, params.batch_size, is_train=False)
         self.dev_batch = self.dev_iterator.get_next()
-        self.test_iterator = build_dataset_op(test_dataset, pad_idx, params.batch_size, is_train=False)
-        self.test_batch = self.test_iterator.get_next()
+
+        if test_path:
+            raw_test = json.load(test_path.open())
+            test_dataset = process_raw_data(
+                raw_test,
+                vocab=vocab,
+                max_len=params.max_len,
+                cache_dir=params.cache_dir,
+                is_train=False,
+                name="test_%s" % params.language)
+            self.test_iterator = build_dataset_op(test_dataset, pad_idx, params.batch_size, is_train=False)
+            self.test_batch = self.test_iterator.get_next()
+        else:
+            self.test_iterator = None
+            self.test_batch = None
 
         config = tf.ConfigProto(allow_soft_placement=True)
         sess = tf.Session(config=config)
@@ -145,7 +151,7 @@ class TrainingHelper(object):
             metrics = self.evaluate_on_dev()
             curr_score = self.metrics_to_single_value(metrics)
 
-            self.logger.info(" Dev Metrics: %s" % metrics[self.task.name])
+            self.logger.info(" Dev Metrics (-log): %s" % metrics[self.task.name])
             if self.log_to_tensorboard:
                 self.write_to_summary(metrics, epoch)
 
@@ -183,6 +189,10 @@ class TrainingHelper(object):
         return scores
 
     def predict_test(self, write_to_file=True):
+        if self.test_iterator is None:
+            self.logger.info(" Test data not found. Skip prediction for test data.")
+            return
+
         predictions = self.model.predict(self.test_iterator.initializer, self.test_batch)
         submission = self.__predictions_to_submission_format(predictions)
 
@@ -222,6 +232,9 @@ def prepare_data_and_vocab(vocab, store_folder, data_dir, language=Language.engl
         dev_path = data_dir / "dev_en.json"
 
     vocab = vocab(store_folder, tokenizer=tokenizer)
+
+    if not os.path.isfile(test_path):
+        test_path = None
     return train_path, dev_path, test_path, vocab
 
 
