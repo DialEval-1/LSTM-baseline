@@ -76,7 +76,6 @@ class Vocab(object):
             self.tokenizer = get_tokenizer(tokenizer)
 
         self.logger.info("Set tokenizer to %s" % self.tokenizer.__name__)
-        self.logger.info("Loaded vocab (embedding) from: %s" % download_url)
 
     def word_to_index(self, word):
         """
@@ -128,9 +127,9 @@ class Vocab(object):
                 self.logger.error("Current RAM (not GPU Memory) is not enough"
                                   " to load the word embedding file %s. " % self.download_file)
                 raise e
-
         else:
             self._wtoi, self._itow, self.weight = load(self.pkl_file)
+            self.logger.info("Loaded cached embedding from file %s" % self.pkl_file)
 
     def _parse_embedding(self):
         raise NotImplementedError

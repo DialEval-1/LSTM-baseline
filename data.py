@@ -150,6 +150,7 @@ def process_raw_data(raw_data,
                        dialogue_length)
 
     if cache_dir:
+        tf.gfile.MakeDirs(str(cache_dir))
         pkl_data = cache_dir / data_pkl_name()
 
         if not pkl_data.is_file():

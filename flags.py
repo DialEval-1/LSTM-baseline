@@ -23,7 +23,7 @@ def __define_base(parser):
     parser.add_argument("--language", type=str, default="english")
     parser.add_argument("--embedding-dir", type=str, default=PROJECT_DIR / "data" / "embedding")
     parser.add_argument("--cache-dir", type=str, default=PROJECT_DIR / "data" / "cache")
-    parser.add_argument("--data-dir", type=str, default=PROJECT_DIR / "stc3dataset" / "data")
+    parser.add_argument("--data-dir", type=str, default=PROJECT_DIR / "dataset")
     parser.add_argument("--output-dir", type=str, default=PROJECT_DIR / "output")
     parser.add_argument("--log-dir", type=str, default=PROJECT_DIR / "log")
     parser.add_argument("--checkpoint-dir", type=str, default=PROJECT_DIR / "checkpoint")
@@ -33,8 +33,8 @@ def __define_base(parser):
     parser.add_argument("--tag", type=str, default="baseline")
 
 def __define_training(parser):
-    parser.add_argument("--num-epoch", type=int, default=30)
-    parser.add_argument("--patience", type=int, default=3)
+    parser.add_argument("--num-epoch", type=int, default=50)
+    parser.add_argument("--patience", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--dropout", type=float, default=.3)
     parser.add_argument("--update-embedding", type=bool, default=False)

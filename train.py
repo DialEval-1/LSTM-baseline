@@ -3,31 +3,28 @@ import json
 import logging
 import time
 
+import numpy as np
 import tensorflow as tf
 from pathlib2 import Path
-from sklearn import model_selection
 
 import data
 import model
 import vocab
 from data import process_raw_data, build_dataset_op, Task
+from eval import evaluate_from_list, OPTIMIZATION_MODE
 from flags import define_flags
-from stc3dataset.data.eval import evaluate_from_list
 from vocab import Language
 
+tf.get_logger().setLevel(logging.ERROR)
 PROJECT_DIR = Path(__file__).parent.parent
-import numpy as np
 
 def flags2params(flags, customized_params=None):
     if customized_params:
         flags.__dict__.update(customized_params)
 
     flags.checkpoint_dir = Path(flags.checkpoint_dir) / flags.language / flags.task
-
     flags.output_dir.mkdir(parents=True, exist_ok=True)
-
     flags.best_model_dir = Path(flags.best_model_dir) / flags.language / flags.task
-
     flags.language = vocab.Language[flags.language]
     flags.task = data.Task[flags.task]
     if flags.language == Language.english:
@@ -60,19 +57,15 @@ class TrainingHelper(object):
         self.best_model_dir = params.best_model_dir / self.run_name / "best"
         self.output_dir = params.output_dir
 
-
         # Loading dataset
-        train_path, test_path, vocab = prepare_data_and_vocab(
+        train_path, dev_path, test_path, vocab = prepare_data_and_vocab(
             vocab=params.vocab,
             store_folder=params.embedding_dir,
             data_dir=params.data_dir,
             language=params.language)
 
-        # split training set into train and dev sets
-        self.raw_train, self.raw_dev = model_selection.train_test_split(
-            json.load(train_path.open()),
-            test_size=params.dev_ratio, random_state=params.random_seed)
-
+        self.raw_train = json.load(train_path.open())
+        self.raw_dev = json.load(dev_path.open())
         self.raw_test = json.load(test_path.open())
 
         train_dataset = process_raw_data(
@@ -127,6 +120,8 @@ class TrainingHelper(object):
                 sess.graph,
                 flush_secs=20)
 
+        self.patience = flags.patience
+
     def train_epoch(self, checkpoint_dir=None):
         train_loss = self.model.train_epoch(
             self.train_iterator.initializer,
@@ -137,24 +132,32 @@ class TrainingHelper(object):
     def load_best_model(self):
         self.model.load_model(self.best_model_dir.parent.resolve())
 
-    def train(self, num_epoch=None):
-        best_score = 100
+    def train(self, num_epoch=None, optimization_mode="max"):
+        best_score = float("inf") if optimization_mode == "min" else -float("inf")
+        no_improvement = 0
         for epoch in range(num_epoch or self.num_epoch):
             start = time.time()
             train_loss = self.train_epoch()
             used_time = time.time() - start
-            self.logger.info(" Epoch %d, training loss = %.4f, used %.2f sec" % (epoch + 1, train_loss, used_time))
+            self.logger.info(
+                " Epoch %d, training loss = %.4f, used %.2f sec" % (
+                    epoch + 1, train_loss, used_time))
             metrics = self.evaluate_on_dev()
             curr_score = self.metrics_to_single_value(metrics)
 
-            self.logger.info(" Dev Metrics: %s" %metrics[self.task.name])
-
+            self.logger.info(" Dev Metrics: %s" % metrics[self.task.name])
             if self.log_to_tensorboard:
                 self.write_to_summary(metrics, epoch)
 
-            if best_score > curr_score:
+            if (model == "min" and curr_score < best_score) or (
+                    optimization_mode == "max" and curr_score > best_score):
                 best_score = curr_score
                 self.model.save_model(self.best_model_dir)
+                no_improvement = 0
+            else:
+                no_improvement += 1
+                if no_improvement >= self.patience:
+                    break
 
         self.load_best_model()
 
@@ -203,27 +206,29 @@ class TrainingHelper(object):
         if self.task == Task.nugget:
             return metrics["nugget"]["rnss"]
         if self.task == Task.quality:
-            return np.mean(metrics["quality"]["rsnod"].values())
+            return np.mean(list(metrics["quality"]["rsnod"].values()))
 
 
 
 def prepare_data_and_vocab(vocab, store_folder, data_dir, language=Language.english, tokenizer=None):
     tf.gfile.MakeDirs(str(store_folder))
     if language == Language.chinese:
-        train_path = data_dir / "train_data_cn.json"
-        test_path = data_dir / "test_data_cn.json"
+        train_path = data_dir / "train_cn.json"
+        test_path = data_dir / "test_cn.json"
+        dev_path = data_dir / "dev_cn.json"
     else:
-        train_path = data_dir / "train_data_en.json"
-        test_path = data_dir / "test_data_en.json"
+        train_path = data_dir / "train_en.json"
+        test_path = data_dir / "test_en.json"
+        dev_path = data_dir / "dev_en.json"
 
     vocab = vocab(store_folder, tokenizer=tokenizer)
-    return train_path, test_path, vocab
+    return train_path, dev_path, test_path, vocab
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     trainer = TrainingHelper()
     if not trainer.inference_mode:
-        trainer.train()
+        trainer.train(optimization_mode=OPTIMIZATION_MODE)
 
     test_prediction = trainer.predict_test()

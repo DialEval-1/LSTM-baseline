@@ -9,6 +9,7 @@ data/
 # C extensions
 *.so
 test.py
+dataset
 # Distribution / packaging
 .Python
 build/
