@@ -36,7 +36,7 @@ We aim to provide a start point for DialEval-1 participants and researchers who 
 Recommended environment: 
 
 - python>=3.6
-- tensorflow-gpu>=1.15
+- tensorflow-gpu>=1.15 (TF 2.0 is not supported)
 
 ```bash
 # Clone this repo
