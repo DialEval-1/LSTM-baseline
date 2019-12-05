@@ -5,7 +5,7 @@ This repo is a LSTM+BoW baseline model for [NTCIR-15 Dialogue Evaluation Task (D
 
 ### Dialogue Quality  Model
 
-Each Dialogue turn is represented as a N x D matrix where N is the number of tokens and D is the embedding dimensionality.  To convert each turn matrix into a vector, we simply apply Bog of Words, which is taking the sum of each word vectors. Then, stacked bidirectional LSTMs are employed to encode turn vectors to obtain the dialogue representation. Finally, the dialogue representation are feed into connected layers to estimate quality score distributions.
+Each Dialogue turn is represented as a N x D matrix where N is the number of tokens and D is the embedding dimensionality.  To convert each turn matrix into a vector, we  apply Bag of Words (BoW), which takes the sum of each word vectors. Then, stacked bidirectional LSTMs are employed to encode turn vectors to obtain the representation of the dialogue. Finally, the dialogue representation is feed into dense layers to estimate the distributions of dialogue quality.
 
 A-score: Accomplishment Score (2, 1, 0, -1, -2).
 
