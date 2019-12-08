@@ -140,6 +140,7 @@ class TrainingHelper(object):
 
     def train(self, num_epoch=None, optimization_mode="max"):
         best_score = float("inf") if optimization_mode == "min" else -float("inf")
+        best_metrics = None
         no_improvement = 0
         for epoch in range(num_epoch or self.num_epoch):
             start = time.time()
@@ -151,19 +152,22 @@ class TrainingHelper(object):
             metrics = self.evaluate_on_dev()
             curr_score = self.metrics_to_single_value(metrics)
 
-            self.logger.info(" Dev Metrics (-log): %s" % metrics[self.task.name])
+            self.logger.info(" Dev scores (-log): %s" % metrics[self.task.name])
             if self.log_to_tensorboard:
                 self.write_to_summary(metrics, epoch)
 
             if (model == "min" and curr_score < best_score) or (
                     optimization_mode == "max" and curr_score > best_score):
                 best_score = curr_score
+                best_metrics = metrics
                 self.model.save_model(self.best_model_dir)
                 no_improvement = 0
             else:
                 no_improvement += 1
                 if no_improvement >= self.patience:
                     break
+        self.logger.info(" %s training Completed." % self.task.name.capitalize())
+        self.logger.info(" The best dev scores (-log): %s" % best_metrics[self.task.name])
 
         self.load_best_model()
 
