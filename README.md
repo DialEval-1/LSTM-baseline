@@ -92,3 +92,19 @@ python train.py \
     --infer-test True \
     --output-dir ./output
 ```
+
+# Results
+Note: the distance scores (e.g., JSD) were transformeed by `-log()` for readability. 
+Thus, the higher the transformed scores, the better the model's effectivness.
+
+### Chinese Track
+
+|                  | JSD  | RNSS |
+|------------------|------|------|
+| Nugget Detection | 3.77 | 2.55 |
+
+|         | RSNOD | NMD  |
+|---------|-------|------|
+| A-Score | 2.12  | 2.66 |
+| E-Score | 2.47  | 2.85 |
+| S-Score | 2.21  | 2.76 |
