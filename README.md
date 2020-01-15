@@ -94,7 +94,7 @@ python train.py \
 ```
 
 # Results
-Note: the distance scores (e.g., JSD) were transformeed by `-log()` for readability. 
+The distance scores (i.e., JSD, RNSS, RSNOD, NMD) were transformeed by `-log()` for readability. 
 Thus, the higher the transformed scores, the better the model's effectivness.
 
 ### Chinese Track
@@ -108,3 +108,17 @@ Thus, the higher the transformed scores, the better the model's effectivness.
 | A-Score | 2.12  | 2.66 |
 | E-Score | 2.47  | 2.85 |
 | S-Score | 2.21  | 2.76 |
+
+### English Track
+|                  | JSD  | RNSS |
+|------------------|------|------|
+| Nugget Detection | 3.71 | 2.49 |
+
+|         | RSNOD | NMD  |
+|---------|-------|------|
+| A-Score | 2.14  | 2.65|
+| E-Score | 2.57  | 3.00 |
+| S-Score | 2.24  | 2.82 |
+
+You may find that the dev scores are higher than the test scores, which is because the training data and dev data are annotated by the same group of annotators, while
+the DialEval-1 test data are annotated by another group of annotators. Thus, there may be a gap between the training data and test data.
