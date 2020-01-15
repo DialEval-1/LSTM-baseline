@@ -93,7 +93,7 @@ python train.py \
     --output-dir ./output
 ```
 
-# Results
+# Test Results
 The distance scores (i.e., JSD, RNSS, RSNOD, NMD) were transformeed by `-log()` for readability. 
 Thus, the higher the transformed scores, the better the model's effectivness.
 
@@ -120,5 +120,5 @@ Thus, the higher the transformed scores, the better the model's effectivness.
 | E-Score | 2.57  | 3.00 |
 | S-Score | 2.24  | 2.82 |
 
-You may find that the dev scores are higher than the test scores, which is because the training data and dev data are annotated by the same group of annotators, while
+You may find that the dev scores are higher than the test scores. This is because the training data and dev data are annotated by the same group of annotators, while
 the DialEval-1 test data are annotated by another group of annotators. Thus, there may be a gap between the training data and test data.
